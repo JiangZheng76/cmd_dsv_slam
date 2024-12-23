@@ -48,10 +48,10 @@ inline bool icp(const std::vector<Eigen::Vector3d> &pts_source,
   Eigen::Matrix4d I4;
   I4.setIdentity();
 
-  auto pc_target_ptr = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>(
+  auto pc_target_ptr = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(
       transformPoints(pts_target, I4));
   auto pc_target_source_ptr =
-      boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>(
+      std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(
           transformPoints(pts_source, tfm_target_source));
 
   pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;

@@ -23,13 +23,14 @@
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/core/robust_kernel_impl.h>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
-
+// CMD_MODE
+#include "Comm/vo_comm.hpp"
 namespace dso {
 LoopHandler::LoopHandler(float lidar_range, float scan_context_thres,
                          IOWrap::PangolinLoopViewer *pangolin_viewer)
     : cur_id_(-1), lidar_range_(lidar_range),
       scan_context_thres_(scan_context_thres),
-      pangolin_viewer_(pangolin_viewer) {
+      pangolin_viewer_(pangolin_viewer){
   // place recognition
   sc_ptr_ = new ScanContext();
   flann::Matrix<float> init_data(new float[sc_ptr_->getHeight()], 1,
@@ -42,19 +43,24 @@ LoopHandler::LoopHandler(float lidar_range, float scan_context_thres,
 
   // setup pose_optimizer_
   std::unique_ptr<g2o::BlockSolverX::LinearSolverType> linearSolver;
-  linearSolver = g2o::make_unique<
+  linearSolver = std::make_unique<
       g2o::LinearSolverEigen<g2o::BlockSolverX::PoseMatrixType>>();
   g2o::OptimizationAlgorithmLevenberg *algorithm =
       new g2o::OptimizationAlgorithmLevenberg(
-          g2o::make_unique<g2o::BlockSolverX>(std::move(linearSolver)));
+          std::make_unique<g2o::BlockSolverX>(std::move(linearSolver)));
   pose_optimizer_.setAlgorithm(algorithm);
   pose_optimizer_.setVerbose(false);
 
+  // CMD_MODE
+  comm.reset(new DSVComm("10.0.0.10","8888"));
+  comm->action();
+  
   running_ = true;
   run_thread_ = boost::thread(&LoopHandler::run, this);
 
   direct_loop_count_ = 0;
   icp_loop_count_ = 0;
+
 }
 
 void LoopHandler::savePose() {
@@ -145,10 +151,13 @@ void LoopHandler::publishKeyframes(FrameHessian *fh, CalibHessian *HCalib,
                                    float dso_error, float scale_error) {
   int prv_id = cur_id_;
 
+
   // keep id increasing
   if (prv_id >= fh->frameID) {
     return;
   }
+  // CMD_MODE
+  comm->publishLoopframe(fh,HCalib,dso_error,scale_error);
 
   cur_id_ = fh->frameID;
   SE3 cur_wc = fh->shell->camToWorld;

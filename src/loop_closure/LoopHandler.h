@@ -29,6 +29,9 @@
 #include "loop_closure/pangolin_viewer/PangolinLoopViewer.h"
 #include "loop_closure/pose_estimation/PoseEstimator.h"
 
+// CMD_MODE
+#include "Comm/vo_comm.hpp"
+
 typedef std::vector<std::chrono::duration<long int, std::ratio<1, 1000000000>>>
     TimeVector;
 
@@ -117,6 +120,7 @@ struct LoopFrame {
 
 class LoopHandler {
 public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   LoopHandler(float lidar_range, float scan_context_thres,
               IOWrap::PangolinLoopViewer *pangolin_viewer);
   ~LoopHandler();
@@ -162,6 +166,9 @@ private:
   g2o::SparseOptimizer pose_optimizer_;
   IOWrap::PangolinLoopViewer *pangolin_viewer_;
   void optimize();
+
+  // CMD_MODE
+  std::shared_ptr<DSVComm> comm;
 };
 
 } // namespace dso
