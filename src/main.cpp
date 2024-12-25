@@ -13,9 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <chrono>
-
-#include <Eigen/Core>
 #include <cv_bridge/cv_bridge.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -23,7 +20,12 @@
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <sensor_msgs/CompressedImage.h>
 #include <sensor_msgs/Image.h>
+
+#include <Eigen/Core>
+#include <chrono>
+#include <opencv2/opencv.hpp>
 
 #include "FrontEnd.h"
 #include "loop_closure/pangolin_viewer/PangolinLoopViewer.h"
@@ -42,7 +44,7 @@ inline void print_average(const std::string &name, const TimeVector &tm_vec) {
 using namespace dso;
 
 class SLAMNode {
-private:
+ private:
   double currentTimeStamp;
   int incomingId;
   FrontEnd *front_end_;
@@ -51,7 +53,7 @@ private:
 
   // scale optimizer
   std::vector<double> tfm_stereo_;
-  float scale_opt_thres_; // set to -1 to disable scale optimization
+  float scale_opt_thres_;  // set to -1 to disable scale optimization
 
   // loop closure
   LoopHandler *loop_handler_;
@@ -61,15 +63,15 @@ private:
 
   void settingsDefault(int preset, int mode);
 
-public:
+ public:
   SLAMNode(const std::vector<double> &tfm_stereo, const std::string &calib0,
            const std::string &calib1, const std::string &vignette0,
            const std::string &vignette1, const std::string &gamma0,
            const std::string &gamma1, bool nomt, int preset, int mode,
            float scale_opt_thres, float lidar_range, float scan_context_thres);
   ~SLAMNode();
-  void imageMessageCallback(const sensor_msgs::ImageConstPtr &msg0,
-                            const sensor_msgs::ImageConstPtr &msg1);
+  void imageMessageCallback(const sensor_msgs::ImagePtr &msg0,
+                            const sensor_msgs::ImagePtr &msg1);
 };
 
 void SLAMNode::settingsDefault(int preset, int mode) {
@@ -79,11 +81,12 @@ void SLAMNode::settingsDefault(int preset, int mode) {
     exit(1);
   }
   if (preset == 0) {
-    printf("DEFAULT settings:\n"
-           "- 2000 active points\n"
-           "- 5-7 active frames\n"
-           "- 1-6 LM iteration each KF\n"
-           "- original image resolution\n");
+    printf(
+        "DEFAULT settings:\n"
+        "- 2000 active points\n"
+        "- 5-7 active frames\n"
+        "- 1-6 LM iteration each KF\n"
+        "- original image resolution\n");
 
     setting_desiredImmatureDensity = 1500;
     setting_desiredPointDensity = 2000;
@@ -94,11 +97,12 @@ void SLAMNode::settingsDefault(int preset, int mode) {
   }
 
   if (preset == 2) {
-    printf("FAST settings:\n"
-           "- 800 active points\n"
-           "- 4-6 active frames\n"
-           "- 1-4 LM iteration each KF\n"
-           "- 424 x 320 image resolution\n");
+    printf(
+        "FAST settings:\n"
+        "- 800 active points\n"
+        "- 4-6 active frames\n"
+        "- 1-4 LM iteration each KF\n"
+        "- 424 x 320 image resolution\n");
 
     setting_desiredImmatureDensity = 600;
     setting_desiredPointDensity = 800;
@@ -117,14 +121,14 @@ void SLAMNode::settingsDefault(int preset, int mode) {
   if (mode == 1) {
     printf("PHOTOMETRIC MODE WITHOUT CALIBRATION!\n");
     setting_photometricCalibration = 0;
-    setting_affineOptModeA = 0; //-1: fix. >=0: optimize (with prior, if > 0).
-    setting_affineOptModeB = 0; //-1: fix. >=0: optimize (with prior, if > 0).
+    setting_affineOptModeA = 0;  //-1: fix. >=0: optimize (with prior, if > 0).
+    setting_affineOptModeB = 0;  //-1: fix. >=0: optimize (with prior, if > 0).
   }
   if (mode == 2) {
     printf("PHOTOMETRIC MODE WITH PERFECT IMAGES!\n");
     setting_photometricCalibration = 0;
-    setting_affineOptModeA = -1; //-1: fix. >=0: optimize (with prior, if > 0).
-    setting_affineOptModeB = -1; //-1: fix. >=0: optimize (with prior, if > 0).
+    setting_affineOptModeA = -1;  //-1: fix. >=0: optimize (with prior, if > 0).
+    setting_affineOptModeB = -1;  //-1: fix. >=0: optimize (with prior, if > 0).
     setting_minGradHistAdd = 3;
   }
 
@@ -209,8 +213,8 @@ SLAMNode::~SLAMNode() {
   delete front_end_;
 }
 
-void SLAMNode::imageMessageCallback(const sensor_msgs::ImageConstPtr &msg0,
-                                    const sensor_msgs::ImageConstPtr &msg1) {
+void SLAMNode::imageMessageCallback(const sensor_msgs::ImagePtr &msg0,
+                                    const sensor_msgs::ImagePtr &msg1) {
   cv::Mat img0, img1;
   try {
     img0 = cv_bridge::toCvShare(msg0, "mono8")->image;
@@ -263,6 +267,20 @@ void SLAMNode::imageMessageCallback(const sensor_msgs::ImageConstPtr &msg0,
   delete undistImg0;
   delete undistImg1;
 }
+// CMD_MODE
+void convertCompressImageToImage(sensor_msgs::CompressedImagePtr &compress_img,
+                                 sensor_msgs::ImagePtr &img) {
+  try {
+    // 将压缩的图像消息转换为OpenCV格式
+    cv::Mat image = cv::imdecode(cv::Mat(compress_img->data), 1);
+
+    // 将OpenCV图像格式转换为图像消息
+    img = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+    img->header.stamp = compress_img->header.stamp;
+  } catch (cv_bridge::Exception &e) {
+    ROS_ERROR("cv_bridge exception: %s", e.what());
+  }
+}
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "direct_stereo_slam");
@@ -302,7 +320,7 @@ int main(int argc, char **argv) {
   nhPriv.param("scale_opt_thres", scale_opt_thres, 15.0f);
 
   // loop closure parameters
-  float lidar_range; // set to -1 to disable loop closure
+  float lidar_range;  // set to -1 to disable loop closure
   float scan_context_thres;
   nhPriv.param("lidar_range", lidar_range, 40.0f);
   nhPriv.param("scan_context_thres", scan_context_thres, 0.33f);
@@ -318,21 +336,30 @@ int main(int argc, char **argv) {
                      scan_context_thres);
 
   if (!bag_path.empty()) {
-
     rosbag::Bag bag;
     bag.open(bag_path, rosbag::bagmode::Read);
     std::vector<std::string> topics = {topic0, topic1};
     rosbag::View view(bag, rosbag::TopicQuery(topics));
 
-    sensor_msgs::ImageConstPtr img0, img1;
+    sensor_msgs::ImagePtr img0, img1;
     bool img0_updated(false), img1_updated(false);
     BOOST_FOREACH (rosbag::MessageInstance const m, view) {
       if (m.getTopic() == topic0) {
         img0 = m.instantiate<sensor_msgs::Image>();
+        if (!img0) {
+          sensor_msgs::CompressedImagePtr compress_img =
+              m.instantiate<sensor_msgs::CompressedImage>();
+          convertCompressImageToImage(compress_img, img0);
+        }
         img0_updated = true;
       }
       if (m.getTopic() == topic1) {
         img1 = m.instantiate<sensor_msgs::Image>();
+        if (!img1) {
+          sensor_msgs::CompressedImagePtr compress_img =
+              m.instantiate<sensor_msgs::CompressedImage>();
+          convertCompressImageToImage(compress_img, img1);
+        }
         img1_updated = true;
       }
       if (img0_updated && img1_updated) {
@@ -344,7 +371,6 @@ int main(int argc, char **argv) {
     }
     bag.close();
   } else {
-
     // ROS subscribe to stereo images
     ros::NodeHandle nh;
     auto *cam0_sub =
@@ -357,8 +383,9 @@ int main(int argc, char **argv) {
         message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
                                                         sensor_msgs::Image>(10),
         *cam0_sub, *cam1_sub);
-    sync->registerCallback(
-        boost::bind(&SLAMNode::imageMessageCallback, &slam_node, _1, _2));
+    // CMD_MODE
+    // sync->registerCallback(
+        // boost::bind(&SLAMNode::imageMessageCallback, &slam_node, _1, _2));
     ros::spin();
   }
 

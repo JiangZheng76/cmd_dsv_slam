@@ -1,0 +1,39 @@
+<launch>
+    <arg name="bag" default="/home/sysu/Desktop/JZ/dataset/KITTI/sequences/00/multi-robot"/>
+    <arg name="seq" default="0_2"/>
+    
+    <arg name="agent1" default="1"/>
+    <rosparam command="load" file="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/T_stereo.yaml" ns="direct_stereo_slam_$(arg agent1)"/>
+    <node name="direct_stereo_slam_$(arg agent1)" pkg="direct_stereo_slam" type="slam_node" output="screen" required="true">
+      <param name="topic0" value="camera/left/image_raw" />
+      <param name="topic1" value="camera/right/image_raw" />
+      <param name="calib0" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera0.txt" />
+      <param name="calib1" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera1.txt" />
+      <param name="bag" value="$(arg bag)/$(arg agent1).bag" />
+      <!-- <param name="scale_opt_thres" value="-1" /> -->
+    </node>
+  
+
+    <arg name="agent2" default="2"/>
+    <rosparam command="load" file="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/T_stereo.yaml" ns="direct_stereo_slam_$(arg agent2)"/>
+    <node name="direct_stereo_slam_$(arg agent2)" pkg="direct_stereo_slam" type="slam_node" output="screen" required="true">
+      <param name="topic0" value="camera/left/image_raw" />
+      <param name="topic1" value="camera/right/image_raw" />
+      <param name="calib0" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera0.txt" />
+      <param name="calib1" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera1.txt" />
+      <param name="bag" value="$(arg bag)/$(arg agent2).bag" />
+      <!-- <param name="scale_opt_thres" value="-1" /> -->
+    </node>
+
+    <arg name="agent3" default="3"/>
+    <rosparam command="load" file="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/T_stereo.yaml" ns="direct_stereo_slam_$(arg agent3)"/>
+    <node name="direct_stereo_slam_$(arg agent3)" pkg="direct_stereo_slam" type="slam_node" output="screen" required="true">
+      <param name="topic0" value="camera/left/image_raw" />
+      <param name="topic1" value="camera/right/image_raw" />
+      <param name="calib0" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera0.txt" />
+      <param name="calib1" value="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/camera1.txt" />
+      <param name="bag" value="$(arg bag)/$(arg agent3).bag" />
+      <!-- <param name="scale_opt_thres" value="-1" /> -->
+    </node>
+</launch>
+  

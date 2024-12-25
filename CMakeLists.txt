@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(direct_stereo_slam)
 
 # set(BUILD_TYPE RelWithDebInfo)
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-march=native \
 -Wno-deprecated-declarations \
