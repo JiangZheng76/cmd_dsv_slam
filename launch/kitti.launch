@@ -1,6 +1,6 @@
 <launch>
-  <arg name="bag" default="/home/sysu/Desktop/JZ/dataset/KITTI/sequences/05/kitti.bag"/>
-  <arg name="seq" default="4_12"/>
+  <arg name="bag" default="/media/sysu/200GB_Other/Dataset/Slam/KITTI/sequences/00/kitti00.bag"/>
+  <arg name="seq" default="0_2"/>
 
   <rosparam command="load" file="$(find direct_stereo_slam)/cams/kitti/$(arg seq)/T_stereo.yaml" ns="direct_stereo_slam"/>
   <node name="direct_stereo_slam" pkg="direct_stereo_slam" type="slam_node" output="screen" required="true">
